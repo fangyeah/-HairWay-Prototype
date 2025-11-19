@@ -1,0 +1,506 @@
+import React, { useMemo, useState } from "react";
+import {
+Button,
+} from "@/components/ui/button";
+import {
+Card,
+CardContent,
+CardDescription,
+CardFooter,
+CardHeader,
+CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import {
+Activity,
+Brain,
+Calendar,
+Camera,
+FileText,
+HeartHandshake,
+Home,
+Image as ImageIcon,
+MapPin,
+MessageCircleHeart,
+ShieldCheck,
+Sparkles,
+Stethoscope,
+Users,
+} from "lucide-react";
+
+/**
+* HairWay｜圓禿全人照護平台（Web Demo）
+* -------------------------------------------------
+* ✅ RWD 網站單頁 Demo，對應你們提案的五大模組：
+* 1) AI 自我檢測（模擬版）
+* 2) 我的治療旅程（日誌儀表板 Demo）
+* 3) 心理支持 × 病友社群（Peer Buddy 配對）
+* 4) 衛教知識中心（圖文 & 短影音位）
+* 5) 合作與永續（找醫師 / 找美髮 / 校園）
+*
+* ✨ 額外差異化功能：Campus Ally、Style with Confidence、Selects 商店位
+* 🧭 導流：IG、Line Bot、預約皮膚科 CTA
+*
+* 備註：本 Demo 無後端，表單事件僅做前端模擬，方便黑客松展示。
+*/
+
+// 小工具：假資料與標籤
+const eduTopics = [
+{
+title: "圓禿是什麼？1 分鐘看懂",
+tag: "入門",
+desc: "圓形禿是免疫系統攻擊毛囊所致，常呈現一塊一塊掉髮。",
+},
+{
+title: "JAK 抑制劑是什麼？",
+tag: "藥物",
+desc: "以訊息傳導為目標的口服治療，需由皮膚科醫師評估使用。",
+},
+{
+title: "圓禿 vs 雄性禿 vs 壓力性落髮",
+tag: "迷思",
+desc: "三者機轉、外觀與治療完全不同，請勿自行亂試偏方。",
+},
+];
+
+const clinics = [
+{ name: "台大醫院 皮膚科", dist: "1.2km", rating: 4.8 },
+{ name: "林口長庚 皮膚科", dist: "10.5km", rating: 4.7 },
+{ name: "台北榮總 皮膚科", dist: "6.9km", rating: 4.6 },
+];
+
+const salons = [
+{ name: "HAIR+ 假髮造型沙龍", offer: "首次造型 85 折" },
+{ name: "HEAD CARE 頭皮護理館", offer: "頭皮檢測 免費" },
+];
+
+const tips = [
+"避免抓撓掉髮區與高溫吹整，減少機械性刺激",
+"記錄每週照片與用藥，觀察是否有新生髮",
+"保持規律作息與壓力管理，睡眠比你想像更重要",
+];
+
+// 簡易 AI 偵測模擬（僅前端規則，非醫療建議）
+function pseudoHairAI({ patchy, rapid, nail, redness }: { patchy: boolean; rapid: boolean; nail: boolean; redness: boolean; }) {
+const score = (patchy ? 0.4 : 0) + (rapid ? 0.3 : 0) + (nail ? 0.2 : 0) - (redness ? 0.1 : 0);
+if (score >= 0.7) return { label: "高度疑似圓禿", advice: "建議盡速就醫皮膚科，勿自行停用或改用偏方。", level: "high" };
+if (score >= 0.4) return { label: "可能為免疫性掉髮", advice: "建議一週內就醫評估，並開始影像紀錄。", level: "mid" };
+return { label: "可能非圓禿（仍建議就醫確認）", advice: "留意是否為脂漏或其他皮膚狀況，勿過度清潔。", level: "low" };
+}
+
+export default function HairWayDemo() {
+const [aiState, setAiState] = useState({ patchy: true, rapid: true, nail: false, redness: false });
+const [aiResult, setAiResult] = useState<{ label: string; advice: string; level: "high"|"mid"|"low" } | null>(null);
+const [photoName, setPhotoName] = useState<string>("");
+const [log, setLog] = useState<string>("");
+const [buddyOpen, setBuddyOpen] = useState<boolean>(false);
+
+const riskColor = useMemo(() => {
+if (!aiResult) return "";
+return aiResult.level === "high" ? "bg-red-100 text-red-700" : aiResult.level === "mid" ? "bg-yellow-100 text-yellow-800" : "bg-emerald-100 text-emerald-700";
+}, [aiResult]);
+
+return (
+<div className="min-h-screen w-full bg-white text-gray-900">
+{/* NAV */}
+<nav className="sticky top-0 z-40 backdrop-blur bg-white/70 border-b">
+<div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+<div className="flex items-center gap-2">
+<Sparkles className="h-5 w-5 text-sky-600" />
+<span className="font-semibold">HairWay｜圓禿全人照護</span>
+</div>
+<div className="hidden md:flex items-center gap-6 text-sm">
+<a href="#ai" className="hover:text-sky-700">AI 自我檢測</a>
+<a href="#journey" className="hover:text-sky-700">我的治療旅程</a>
+<a href="#psycho" className="hover:text-sky-700">心理支持</a>
+<a href="#edu" className="hover:text-sky-700">衛教中心</a>
+<a href="#ally" className="hover:text-sky-700">合作與永續</a>
+</div>
+<div className="flex items-center gap-2">
+<Button size="sm" variant="outline" className="rounded-2xl">加入 Line Bot</Button>
+<Button size="sm" className="bg-sky-600 hover:bg-sky-700 rounded-2xl">預約皮膚科</Button>
+</div>
+</div>
+</nav>
+
+{/* HERO */}
+<header className="mx-auto max-w-7xl px-4 pt-10 pb-6">
+<div className="grid lg:grid-cols-2 gap-8 items-center">
+<div>
+<Badge className="bg-sky-100 text-sky-700 rounded-xl mb-3">From hair loss to hope</Badge>
+<h1 className="text-3xl md:text-5xl font-semibold leading-tight">用數位與陪伴，重建每一根勇氣的重量。</h1>
+<p className="mt-4 text-gray-600">AI 自我檢測 × 治療追蹤 × 心理支持 × 校園與美髮合作，打造圓禿全人照護的一站式平台。</p>
+<div className="mt-6 flex flex-wrap gap-3">
+<Button className="bg-sky-600 hover:bg-sky-700 rounded-2xl"><Camera className="mr-2 h-4 w-4"/>立即體驗 AI 檢測</Button>
+<Button variant="outline" className="rounded-2xl"><HeartHandshake className="mr-2 h-4 w-4"/>加入 Peer Buddy</Button>
+</div>
+<div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
+<div className="flex items-center gap-1"><ShieldCheck className="h-4 w-4"/> 醫療顧問審核衛教</div>
+<div className="flex items-center gap-1"><Activity className="h-4 w-4"/> 追蹤你的改善曲線</div>
+</div>
+</div>
+<div className="relative">
+<div className="aspect-[4/3] w-full rounded-3xl bg-gradient-to-br from-sky-50 to-indigo-50 border p-6 shadow-sm">
+<div className="grid grid-cols-3 gap-3 h-full">
+<Card className="col-span-2 rounded-2xl">
+<CardHeader className="pb-2">
+<CardTitle className="text-base">AI 掉髮雷達</CardTitle>
+<CardDescription>上傳照片或回答幾個問題，獲得就醫建議</CardDescription>
+</CardHeader>
+<CardContent className="space-y-3">
+<div className="grid grid-cols-2 gap-3">
+<Label className="flex items-center gap-2"><Switch checked={aiState.patchy} onCheckedChange={(v)=>setAiState(s=>({...s, patchy:v}))}/>一塊一塊的掉髮</Label>
+<Label className="flex items-center gap-2"><Switch checked={aiState.rapid} onCheckedChange={(v)=>setAiState(s=>({...s, rapid:v}))}/>突然、快速發生</Label>
+<Label className="flex items-center gap-2"><Switch checked={aiState.nail} onCheckedChange={(v)=>setAiState(s=>({...s, nail:v}))}/>指甲有凹陷/異常</Label>
+<Label className="flex items-center gap-2"><Switch checked={aiState.redness} onCheckedChange={(v)=>setAiState(s=>({...s, redness:v}))}/>掉髮區紅腫明顯</Label>
+</div>
+<div className="flex items-center gap-2">
+<Input type="file" accept="image/*" onChange={(e)=> setPhotoName(e.target.files?.[0]?.name ?? "")}/>
+<Button variant="outline" className="rounded-2xl"><ImageIcon className="mr-2 h-4 w-4"/>示範照片</Button>
+</div>
+<Button className="w-full bg-sky-600 hover:bg-sky-700 rounded-2xl" onClick={()=> setAiResult(pseudoHairAI(aiState))}>產生檢測結果</Button>
+{aiResult && (
+<div className={`rounded-xl p-3 text-sm ${riskColor}`}>
+<div className="font-medium">{aiResult.label}</div>
+<div className="opacity-90">{aiResult.advice}</div>
+{photoName && <div className="mt-1 opacity-70">已上傳：{photoName}</div>}
+</div>
+)}
+<p className="text-xs text-gray-500">* 本工具僅供衛教參考，不能替代醫師診斷。</p>
+</CardContent>
+</Card>
+<Card className="rounded-2xl">
+<CardHeader className="pb-2">
+<CardTitle className="text-base">本週小提醒</CardTitle>
+<CardDescription>根據你的狀態提供溫柔建議</CardDescription>
+</CardHeader>
+<CardContent className="space-y-2 text-sm">
+{tips.map((t,i)=> (
+<div key={i} className="rounded-lg border p-2">• {t}</div>
+))}
+</CardContent>
+</Card>
+</div>
+</div>
+</div>
+</div>
+</header>
+
+{/* AI SECTION */}
+<section id="ai" className="mx-auto max-w-7xl px-4 py-10">
+<div className="grid lg:grid-cols-3 gap-6">
+<Card className="lg:col-span-2 rounded-3xl">
+<CardHeader>
+<CardTitle className="flex items-center gap-2 text-xl"><Brain className="h-5 w-5 text-sky-600"/> AI 自我檢測（互動 Demo）</CardTitle>
+<CardDescription>回答 4 題＋上傳照片（選填），獲得就醫與照護建議</CardDescription>
+</CardHeader>
+<CardContent className="space-y-4">
+<div className="grid sm:grid-cols-2 gap-4">
+<Card className="rounded-2xl">
+<CardHeader className="pb-2"><CardTitle className="text-base">症狀選擇</CardTitle></CardHeader>
+<CardContent className="space-y-2 text-sm">
+<Label className="flex items-center gap-2"><Switch checked={aiState.patchy} onCheckedChange={(v)=>setAiState(s=>({...s, patchy:v}))}/>局部圓形/地圖狀掉髮</Label>
+<Label className="flex items-center gap-2"><Switch checked={aiState.rapid} onCheckedChange={(v)=>setAiState(s=>({...s, rapid:v}))}/>近 4 週內快速惡化</Label>
+<Label className="flex items-center gap-2"><Switch checked={aiState.nail} onCheckedChange={(v)=>setAiState(s=>({...s, nail:v}))}/>指甲異常（點狀凹陷等）</Label>
+<Label className="flex items-center gap-2"><Switch checked={aiState.redness} onCheckedChange={(v)=>setAiState(s=>({...s, redness:v}))}/>掉髮區紅腫/滲出</Label>
+</CardContent>
+</Card>
+<Card className="rounded-2xl">
+<CardHeader className="pb-2"><CardTitle className="text-base">照片上傳（選填）</CardTitle></CardHeader>
+<CardContent>
+<Input type="file" accept="image/*" onChange={(e)=> setPhotoName(e.target.files?.[0]?.name ?? "")}/>
+<p className="text-xs text-gray-500 mt-2">建議自然光下、距離 20–30cm 的清晰照片。</p>
+</CardContent>
+</Card>
+</div>
+<div className="flex flex-wrap gap-3">
+<Button className="rounded-2xl bg-sky-600 hover:bg-sky-700" onClick={()=> setAiResult(pseudoHairAI(aiState))}><Camera className="mr-2 h-4 w-4"/>產生檢測結果</Button>
+<Button variant="outline" className="rounded-2xl" onClick={()=> {setAiResult(null); setPhotoName("")}}>重設</Button>
+</div>
+{aiResult && (
+<Card className="rounded-2xl border-sky-200">
+<CardHeader className="pb-2"><CardTitle className="text-base">你的檢測摘要</CardTitle></CardHeader>
+<CardContent>
+<div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm ${riskColor}`}>
+<Sparkles className="h-4 w-4"/>{aiResult.label}
+</div>
+<p className="mt-2 text-sm text-gray-700">{aiResult.advice}</p>
+<div className="mt-4 flex flex-wrap gap-2">
+<Button className="rounded-2xl"><Stethoscope className="mr-2 h-4 w-4"/>預約皮膚科</Button>
+<Button variant="outline" className="rounded-2xl"><FileText className="mr-2 h-4 w-4"/>了解治療選項</Button>
+</div>
+</CardContent>
+</Card>
+)}
+</CardContent>
+</Card>
+
+<Card className="rounded-3xl">
+<CardHeader>
+<CardTitle className="flex items-center gap-2 text-xl"><Calendar className="h-5 w-5 text-sky-600"/> 本週任務</CardTitle>
+<CardDescription>小步前進，讓變好看得見</CardDescription>
+</CardHeader>
+<CardContent className="space-y-3 text-sm">
+<div className="rounded-xl border p-3">1) 每週上傳一張頭皮照</div>
+<div className="rounded-xl border p-3">2) 記錄用藥與不適</div>
+<div className="rounded-xl border p-3">3) 練習 4-7-8 呼吸 3 次/日</div>
+</CardContent>
+<CardFooter>
+<Button variant="outline" className="w-full rounded-2xl">加入提醒</Button>
+</CardFooter>
+</Card>
+</div>
+</section>
+
+{/* JOURNEY */}
+<section id="journey" className="mx-auto max-w-7xl px-4 py-10">
+<div className="grid lg:grid-cols-3 gap-6">
+<Card className="rounded-3xl lg:col-span-2">
+<CardHeader>
+<CardTitle className="flex items-center gap-2 text-xl"><Activity className="h-5 w-5 text-sky-600"/> 我的治療旅程（日誌儀表板 Demo）</CardTitle>
+<CardDescription>用文字日誌模擬（可貼圖、可上傳相片）</CardDescription>
+</CardHeader>
+<CardContent className="space-y-3">
+<Textarea rows={5} placeholder="今天的狀態、心情、用藥與任何想說的話…" value={log} onChange={(e)=> setLog(e.target.value)} />
+<div className="flex flex-wrap gap-2">
+<Badge variant="secondary">#小毛長出來了</Badge>
+<Badge variant="secondary">#今天比較不癢</Badge>
+<Badge variant="secondary">#回診完成</Badge>
+</div>
+</CardContent>
+<CardFooter className="flex items-center justify-between">
+<div className="text-xs text-gray-500">* 你的日誌只會存在本機（Demo）。正式版支援安全雲端與跨院所攜帶。</div>
+<Button className="rounded-2xl">儲存日誌</Button>
+</CardFooter>
+</Card>
+
+<Card className="rounded-3xl">
+<CardHeader>
+<CardTitle className="text-xl">附近合作診所</CardTitle>
+<CardDescription>就近就醫更安心</CardDescription>
+</CardHeader>
+<CardContent className="space-y-3">
+{clinics.map((c, i)=> (
+<div key={i} className="rounded-xl border p-3 flex items-center justify-between">
+<div>
+<div className="font-medium">{c.name}</div>
+<div className="text-xs text-gray-500 flex items-center gap-1"><MapPin className="h-3 w-3"/>{c.dist} · ⭐ {c.rating}</div>
+</div>
+<Button size="sm" className="rounded-2xl">預約</Button>
+</div>
+))}
+</CardContent>
+</Card>
+</div>
+</section>
+
+{/* PSYCHOSOCIAL */}
+<section id="psycho" className="mx-auto max-w-7xl px-4 py-10">
+<Card className="rounded-3xl">
+<CardHeader>
+<CardTitle className="flex items-center gap-2 text-xl"><MessageCircleHeart className="h-5 w-5 text-sky-600"/> 心理支持 × 病友社群</CardTitle>
+<CardDescription>Peer Buddy 配對、匿名聊天室、小髮毛 AI 陪伴</CardDescription>
+</CardHeader>
+<CardContent>
+<Tabs defaultValue="buddy">
+<TabsList className="rounded-2xl">
+<TabsTrigger value="buddy">Peer Buddy</TabsTrigger>
+<TabsTrigger value="chat">AI 陪伴</TabsTrigger>
+<TabsTrigger value="forum">匿名社群</TabsTrigger>
+</TabsList>
+<TabsContent value="buddy" className="mt-4">
+<div className="grid md:grid-cols-2 gap-4">
+<div className="space-y-3">
+<Label>你想聊的主題</Label>
+<Input placeholder="例如：戴假髮的感受、校園人際…"/>
+<Label>你的年齡/學校（選填）</Label>
+<Input placeholder="17 歲 / 高中二年級"/>
+<Button className="rounded-2xl" onClick={()=> setBuddyOpen(true)}><Users className="mr-2 h-4 w-4"/>開始配對</Button>
+{buddyOpen && (
+<div className="rounded-xl border p-3 text-sm">
+✅ 已為你找到 2 位同齡病友，可於 24 小時內開始對話（Demo）
+</div>
+)}
+</div>
+<div className="rounded-2xl border p-4 bg-sky-50/40">
+<div className="font-medium mb-2">Peer Buddy 守則</div>
+<ul className="text-sm list-disc pl-5 space-y-1 text-gray-700">
+<li>互相傾聽、尊重與保密</li>
+<li>避免醫療建議，鼓勵就醫</li>
+<li>感到不適時可立即呼叫心理師</li>
+</ul>
+</div>
+</div>
+</TabsContent>
+<TabsContent value="chat" className="mt-4">
+<Card className="rounded-2xl">
+<CardHeader className="pb-2"><CardTitle className="text-base">小髮毛 AI</CardTitle><CardDescription>提供同理式回應與舒緩練習</CardDescription></CardHeader>
+<CardContent className="space-y-2">
+<div className="rounded-xl border p-3 text-sm">👋 我在這裡。先跟我說一句話：你現在最擔心的是什麼？</div>
+<Textarea rows={3} placeholder="輸入你的感受…"/>
+<div className="flex flex-wrap gap-2">
+<Button variant="outline" className="rounded-2xl">引導呼吸</Button>
+<Button variant="outline" className="rounded-2xl">放鬆肌肉</Button>
+<Button variant="outline" className="rounded-2xl">睡前安定</Button>
+</div>
+</CardContent>
+</Card>
+</TabsContent>
+<TabsContent value="forum" className="mt-4">
+<div className="grid md:grid-cols-2 gap-4">
+<Card className="rounded-2xl">
+<CardHeader className="pb-2"><CardTitle className="text-base">匿名分享</CardTitle></CardHeader>
+<CardContent className="space-y-2 text-sm">
+<div className="rounded-xl border p-3">🙋‍♀️ 今天第一次戴假髮去上課，大家反應比我想像温柔…</div>
+<div className="rounded-xl border p-3">🧢 有人推薦運動時固定假髮的方式嗎？</div>
+</CardContent>
+</Card>
+<Card className="rounded-2xl">
+<CardHeader className="pb-2"><CardTitle className="text-base">心理資源</CardTitle></CardHeader>
+<CardContent className="space-y-2 text-sm">
+<div className="rounded-xl border p-3">📞 校園輔導室 | 線上預約</div>
+<div className="rounded-xl border p-3">🧠 心理師專線 | 初談優惠</div>
+</CardContent>
+</Card>
+</div>
+</TabsContent>
+</Tabs>
+</CardContent>
+</Card>
+</section>
+
+{/* EDUCATION */}
+<section id="edu" className="mx-auto max-w-7xl px-4 py-10">
+<div className="grid lg:grid-cols-3 gap-6">
+<Card className="rounded-3xl lg:col-span-2">
+<CardHeader>
+<CardTitle className="flex items-center gap-2 text-xl"><FileText className="h-5 w-5 text-sky-600"/> 衛教知識中心</CardTitle>
+<CardDescription>短影音、圖卡、常見問答，皆經醫療顧問審核</CardDescription>
+</CardHeader>
+<CardContent className="grid md:grid-cols-3 gap-4">
+{eduTopics.map((e, i)=> (
+<Card key={i} className="rounded-2xl hover:shadow-md transition">
+<CardHeader className="pb-2">
+<div className="flex items-center justify-between">
+<CardTitle className="text-base leading-snug">{e.title}</CardTitle>
+<Badge variant="secondary" className="rounded-xl">{e.tag}</Badge>
+</div>
+<CardDescription>{e.desc}</CardDescription>
+</CardHeader>
+<CardFooter>
+<Button variant="outline" className="w-full rounded-2xl">閱讀 / 觀看</Button>
+</CardFooter>
+</Card>
+))}
+</CardContent>
+</Card>
+
+<Card className="rounded-3xl">
+<CardHeader>
+<CardTitle className="flex items-center gap-2 text-xl"><Home className="h-5 w-5 text-sky-600"/> Style with Confidence</CardTitle>
+<CardDescription>戴假髮也可以很時尚。看見漂亮、相信自己。</CardDescription>
+</CardHeader>
+<CardContent className="space-y-3 text-sm">
+{salons.map((s,i)=> (
+<div key={i} className="rounded-xl border p-3 flex items-center justify-between">
+<div>
+<div className="font-medium">{s.name}</div>
+<div className="text-xs text-gray-500">{s.offer}</div>
+</div>
+<Button size="sm" className="rounded-2xl">預約造型</Button>
+</div>
+))}
+</CardContent>
+</Card>
+</div>
+</section>
+
+{/* PARTNERS & SDG */}
+<section id="ally" className="mx-auto max-w-7xl px-4 py-10">
+<Card className="rounded-3xl">
+<CardHeader>
+<CardTitle className="flex items-center gap-2 text-xl"><ShieldCheck className="h-5 w-5 text-sky-600"/> 合作與永續</CardTitle>
+<CardDescription>找醫師 / 找美髮 / 校園 Ally / SDGs 對應</CardDescription>
+</CardHeader>
+<CardContent>
+<Tabs defaultValue="doctor">
+<TabsList className="rounded-2xl">
+<TabsTrigger value="doctor"><Stethoscope className="mr-1 h-4 w-4"/>找醫師</TabsTrigger>
+<TabsTrigger value="campus">Campus Ally</TabsTrigger>
+<TabsTrigger value="sdg">SDGs</TabsTrigger>
+<TabsTrigger value="shop">HairWay Selects</TabsTrigger>
+</TabsList>
+<TabsContent value="doctor" className="mt-4 grid md:grid-cols-3 gap-4">
+{clinics.map((c,i)=> (
+<Card key={i} className="rounded-2xl">
+<CardHeader className="pb-2"><CardTitle className="text-base">{c.name}</CardTitle><CardDescription>{c.dist} · ⭐ {c.rating}</CardDescription></CardHeader>
+<CardFooter><Button className="w-full rounded-2xl">預約</Button></CardFooter>
+</Card>
+))}
+</TabsContent>
+<TabsContent value="campus" className="mt-4 grid md:grid-cols-2 gap-4">
+<Card className="rounded-2xl">
+<CardHeader className="pb-2"><CardTitle className="text-base">教師教材下載</CardTitle></CardHeader>
+<CardContent className="text-sm text-gray-700">提供簡報、講義與測驗題庫（圓禿認識、去污名、同理訓練）。</CardContent>
+<CardFooter><Button variant="outline" className="rounded-2xl">下載教材</Button></CardFooter>
+</Card>
+<Card className="rounded-2xl">
+<CardHeader className="pb-2"><CardTitle className="text-base">學生自我測驗</CardTitle></CardHeader>
+<CardContent className="text-sm text-gray-700">30 秒互動小測驗，評估是否需要就醫與心理支持。</CardContent>
+<CardFooter><Button className="rounded-2xl">開始測驗</Button></CardFooter>
+</Card>
+</TabsContent>
+<TabsContent value="sdg" className="mt-4">
+<div className="grid md:grid-cols-4 gap-4 text-sm">
+<Card className="rounded-2xl"><CardHeader className="pb-2"><CardTitle className="text-base">SDG 3 健康</CardTitle></CardHeader><CardContent>提升健康識能與就醫可近性（AI 導診、衛教）。</CardContent></Card>
+<Card className="rounded-2xl"><CardHeader className="pb-2"><CardTitle className="text-base">SDG 9 創新</CardTitle></CardHeader><CardContent>數位平台與 RWE 生態，支援臨床決策。</CardContent></Card>
+<Card className="rounded-2xl"><CardHeader className="pb-2"><CardTitle className="text-base">SDG 10 平等</CardTitle></CardHeader><CardContent>偏鄉遠距、校園 Ally，縮小資源差距。</CardContent></Card>
+<Card className="rounded-2xl"><CardHeader className="pb-2"><CardTitle className="text-base">SDG 12 責任消費</CardTitle></CardHeader><CardContent>杜絕誇大療效，導入醫學審核與合規商品。</CardContent></Card>
+</div>
+</TabsContent>
+<TabsContent value="shop" className="mt-4 grid md:grid-cols-3 gap-4">
+<Card className="rounded-2xl"><CardHeader className="pb-2"><CardTitle className="text-base">溫和洗髮精</CardTitle><CardDescription>無香精 / SLS</CardDescription></CardHeader><CardFooter><Button variant="outline" className="w-full rounded-2xl">查看</Button></CardFooter></Card>
+<Card className="rounded-2xl"><CardHeader className="pb-2"><CardTitle className="text-base">頭皮遮瑕粉</CardTitle><CardDescription>運動不易脫落</CardDescription></CardHeader><CardFooter><Button variant="outline" className="w-full rounded-2xl">查看</Button></CardFooter></Card>
+<Card className="rounded-2xl"><CardHeader className="pb-2"><CardTitle className="text-base">假髮護理組</CardTitle><CardDescription>清潔 + 護理</CardDescription></CardHeader><CardFooter><Button variant="outline" className="w-full rounded-2xl">查看</Button></CardFooter></Card>
+</TabsContent>
+</Tabs>
+</CardContent>
+</Card>
+</section>
+
+{/* CTA */}
+<section className="mx-auto max-w-7xl px-4 py-12">
+<Card className="rounded-3xl bg-gradient-to-br from-sky-50 to-indigo-50 border-sky-100">
+<CardContent className="py-8 px-6 md:px-10 flex flex-col md:flex-row items-center justify-between gap-6">
+<div>
+<h3 className="text-2xl font-semibold">準備好一起走上 HairWay 嗎？</h3>
+<p className="text-gray-600 mt-1">加入 Line Bot、追蹤 IG，或直接預約皮膚科，從今天開始照顧自己。</p>
+</div>
+<div className="flex flex-wrap gap-3">
+<Button variant="outline" className="rounded-2xl">追蹤 IG</Button>
+<Button className="rounded-2xl bg-sky-600 hover:bg-sky-700">加入 Line Bot</Button>
+<Button className="rounded-2xl">預約皮膚科</Button>
+</div>
+</CardContent>
+</Card>
+</section>
+
+{/* FOOTER */}
+<footer className="border-t">
+<div className="mx-auto max-w-7xl px-4 py-6 text-sm text-gray-500 flex flex-col md:flex-row items-center justify-between gap-3">
+<div className="flex items-center gap-2"><Sparkles className="h-4 w-4"/> HairWay — 圓禿全人照護數位平台</div>
+<div className="flex flex-wrap gap-3">
+<a className="hover:text-sky-700" href="#">隱私與資料保護</a>
+<a className="hover:text-sky-700" href="#">醫療免責聲明</a>
+<a className="hover:text-sky-700" href="#">合作洽談</a>
+</div>
+</div>
+</footer>
+</div>
+);
+}
